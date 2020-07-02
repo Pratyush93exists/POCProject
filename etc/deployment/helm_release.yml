@@ -1,0 +1,69 @@
+name: pepto-data-service
+chart:
+  git: git@github.azc.ext.hp.com:hp-data-platform/dataos-helm-charts.git
+  path: charts/dataos-web-app
+  ref: # Yet to deploy
+ecr_repos:
+  - name: pepto-data-service
+    key: webapp.image
+
+values:
+  global_properties_file: "k8s-config/{{app}}/global.properties"
+  file: 'k8s-config/{{app}}/{{app}}.yml'
+  script: 'scripts/k8s/pds_config.py'  
+  default:
+    webapp:   
+      livenessProbe:
+        httpGet:
+          path: /1/
+          port: 4567
+      resources:
+        requests:
+          memory: "1000M"
+          cpu: "200m"
+        limits:
+          memory: "1000M"
+          cpu: "200m"
+      secrets:
+        # lf-query-api: Commiting this out as we are not sure If we need this at this point and time....
+        #   data:
+        #   - secretName: blacksea/dev/mysqlDb/reader
+        #     property: username
+        #     k8sProperty: QUERYAPI_DATABASE_USER
+        #   - secretName: blacksea/dev/mysqlDb/reader
+        #     property: password
+        #     k8sProperty: QUERYAPI_DATABASE_PASSWORD
+      config:
+        type: volume
+        multiLine:
+          instance.conf:
+            mountPath: /config
+            value: |-
+                DB_HOST: gbd-lf-common-dev-mysqldbcluster-u0a64ww9sa5e.cluster-ci0obxa2r32i.us-west-2.rds.amazonaws.com
+                DB_CLUSTER: gbd-lf-common-dev-mysqldbcluster-u0a64ww9sa5e
+                DB_PORT: 3306
+                DB_ENGINE: mysql
+                SNS_ARN: arn:aws:sns:us-west-2:179791809912:rcb-lf-data-lake-IntegrationTopic-UIDXXVA9MCI4       
+      ingress:
+        enable: true
+        host: "{{lf-query-api.ingress.nginx.hostname}}"
+        secret: "{{lf-query-api.ingress.nginx.secret}}"
+        paths:
+        - path: /
+          port: 7800
+      service:
+        ports:
+        - name: http
+          port: 7800
+          protocol: TCP
+      albIngress:
+        enable: false
+    serviceAccounts:
+      k8s-lf-query-api:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::$${{blacksea.lf.aws.account-id}}$$:role/$${{lf-query-api.kubernetes.service_account_role}}$$
+    serviceAccountName: k8s-lf-query-api
+    dbMigration:
+      enable: false
+    nodeSelector:
+      deployment: default

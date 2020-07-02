@@ -1,0 +1,30 @@
+resources:
+    repositories:
+        - repository: templates
+          type: githubenterprise
+          name: codeway/templates
+          endpoint: ghe 
+
+
+variables: 
+- group: Defaults
+
+trigger:
+    branches:
+        include:
+            -master
+            -feature/*
+
+
+pr: none
+
+stages: 
+    - template: projects/dataos/stages/docker_build-v1.yml@templates
+      parameters: 
+        imageName: 'pepto-data-service'
+        account: 'account-id' #Yet to get 
+        region: 'us-west-2'
+        roleArn: 'role-arn' #Yet to get 
+        externalId: $(pepto_external_id) #Yet to get 
+        dockerBuildArgs: '--target=dev'
+        build_type: 'container'  
